@@ -1,0 +1,159 @@
+import argparse
+import curses
+import random
+import signal
+import logging
+import posix_ipc
+from datetime import datetime
+
+# Funktion zum Einlesen von Buzzwords aus einer Textdatei
+def read_buzzwords_from_file(file_path):
+    with open(file_path, "r") as file:
+        buzzwords = [line.strip() for line in file.readlines()]
+    return buzzwords
+
+# Funktion zum Erstellen eines Bingo-Felds
+def create_bingo_board(xaxis, yaxis, buzzwords):
+    board_size = xaxis * yaxis
+    if board_size < len(buzzwords):
+        raise ValueError("Das Bingo-Feld ist zu klein für die Anzahl der Buzzwords.")
+    board = random.sample(buzzwords, board_size)
+    
+    # Leeres Feld in der Mitte (Joker)
+    if xaxis % 2 == 1 and yaxis % 2 == 1:
+        board[(yaxis // 2) * xaxis + (xaxis // 2)] = "Joker"
+        
+    return [board[i:i+xaxis] for i in range(0, board_size, xaxis)]
+
+# Funktion zum Drucken des Bingo-Felds mit Markierungen
+def print_bingo_board(stdscr, board, marked):
+    stdscr.clear()
+    for y, row in enumerate(board):
+        for x, cell in enumerate(row):
+            if (x, y) in marked:
+                stdscr.addstr(y, x * (max(len(word) for word in row) + 2), "X")
+            else:
+                stdscr.addstr(y, x * (max(len(word) for word in row) + 2), cell)
+    stdscr.refresh()
+
+# Funktion zum Überprüfen des Bingo-Zustands
+def check_bingo(board, marked):
+    # Zeilen überprüfen
+    for row in board:
+        if all(cell in marked for cell in row):
+            return True
+
+    # Spalten überprüfen
+    for col in range(len(board[0])):
+        if all(board[row][col] in marked for row in range(len(board))):
+            return True
+
+    # Diagonalen überprüfen
+    if all(board[i][i] in marked for i in range(min(len(board), len(board[0])))) \
+            or all(board[i][len(board[0]) - i - 1] in marked for i in range(min(len(board), len(board[0])))):
+        return True
+
+    return False
+
+# Funktion zum Spielablauf
+def play_game(stdscr, player_id, queue_name, xaxis, yaxis, buzzwords, log_file):
+    # Verbindung zur Message Queue herstellen
+    player_queue = posix_ipc.MessageQueue(queue_name)
+
+    # Logger konfigurieren
+    logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%Y-%m-%d-%H-%M-%S')
+    logger = logging.getLogger()
+
+    # Spielstart protokollieren
+    logger.info("Start des Spiels")
+
+    # Größe des Spielfelds protokollieren
+    logger.info(f"Größe des Spielfelds: ({xaxis}-Achse/{yaxis}-Achse)")
+
+    # Jeder Spieler bekommt ein eigenes Bingo-Feld
+    bingo_board = create_bingo_board(xaxis, yaxis, buzzwords)
+    marked = set()
+
+    # Spielstartzeit festhalten
+    start_time = datetime.now()
+
+    # Spiel starten
+    while True:
+        print_bingo_board(stdscr, bingo_board, marked)
+
+        # Der Spieler wählt ein Buzzword
+        key = stdscr.getch()
+        if key == ord("q"):
+            break
+        elif key == ord(" "):
+            continue
+        elif key == curses.KEY_MOUSE:
+            _, mx, my, _, _ = curses.getmouse()
+            mx //= (max(len(word) for word in bingo_board[0]) + 2)
+            my //= 2
+            if (mx, my) in marked:
+                marked.remove((mx, my))
+            else:
+                marked.add((mx, my))
+                # Markierung protokollieren
+                logger.info(f"{datetime.now()} {bingo_board[my][mx]} ({mx+1}-Achse/{my+1}-Achse)")
+        elif key == curses.KEY_BACKSPACE:
+            marked.clear()
+
+        # Nachricht an den Hauptprozess senden
+        player_queue.send(str(marked))
+
+        # Nachricht vom Hauptprozess empfangen
+        result = player_queue.receive()
+        if result[0] == "winner":
+            # Sieg protokollieren
+            logger.info(f"{datetime.now()} Sieg")
+            stdscr.addstr(yaxis + 1, 0, f"Herzlichen Glückwunsch, Spieler {player_id}! Du hast gewonnen!")
+            stdscr.refresh()
+            stdscr.getch()
+            break
+
+        # Aktualisierte Nachricht empfangen und das Bingo-Board aktualisieren
+        marked = eval(result[0])
+
+    # Spielende protokollieren
+    logger.info(f"{datetime.now()} Ende des Spiel")
+
+def start_new_round(roundfile, xaxis, yaxis, wordfile, maxplayers, player_name):
+    # Platz für weitere Logik zum Starten einer neuen Runde
+    print("Neue Runde gestartet!")
+    print(f"Roundfile: {roundfile}")
+    print(f"X-Achse: {xaxis}, Y-Achse: {yaxis}")
+    print(f"Wordfile: {wordfile}")
+    print(f"Maximale Anzahl der Spieler: {maxplayers}")
+    print(f"Spielername: {player_name}")
+
+def join_existing_round(roundfile, player_name):
+    # Platz für weitere Logik zum Beitritt zu einer bestehenden Runde
+    print(f"Spieler {player_name} ist der bestehenden Runde beigetreten!")
+    print(f"Roundfile: {roundfile}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Buzzword-Bingo-Spiel")
+    subparsers = parser.add_subparsers(title="Befehle", dest="command")
+
+    # Befehl zum Starten einer neuen Runde
+    newround_parser = subparsers.add_parser("newround", help="Startet eine neue Runde")
+    newround_parser.add_argument("-roundfile", help="Pfad und Dateiname der Rundendatei", required=True)
+    newround_parser.add_argument("-xaxis", type=int, help="Anzahl der Felder in der Breite", required=True)
+    newround_parser.add_argument("-yaxis", type=int, help="Anzahl der Felder in der Höhe", required=True)
+    newround_parser.add_argument("-wordfile", help="Pfad und Dateiname der Textdatei mit den Buzzwords", required=True)
+    newround_parser.add_argument("-maxplayers", type=int, help="Maximale Anzahl der Spieler", required=True)
+    newround_parser.add_argument("-player", help="Name des Spielers", required=True)
+
+    # Befehl zum Beitritt zu einer bestehenden Runde
+    joinround_parser = subparsers.add_parser("joinround", help="Tritt einer bestehenden Runde bei")
+    joinround_parser.add_argument("-roundfile", help="Pfad und Dateiname der Rundendatei", required=True)
+    joinround_parser.add_argument("-player", help="Name des Spielers", required=True)
+
+    args = parser.parse_args()
+
+    if args.command == "newround":
+        start_new_round(args.roundfile, args.xaxis, args.yaxis, args.wordfile, args.maxplayers, args.player)
+    elif args.command == "joinround":
+        join_existing_round(args.roundfile, args.player)

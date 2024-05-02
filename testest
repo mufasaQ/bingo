@@ -1,0 +1,9 @@
+
+import os from 
+
+
+def hi()-> None:
+    print(1)
+    os.fork()+exec()
+
+hi()
