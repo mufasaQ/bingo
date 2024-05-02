@@ -1,9 +1,15 @@
 
-import os from 
+import os
 
 
 def hi()-> None:
     print(1)
-    os.fork()+exec()
+    amParent = os.fork()
+    if(amParent == 0):
+        print(amParent)
+    
+    if(amParent>0):
+        print(amParent)
+    
 
 hi()
