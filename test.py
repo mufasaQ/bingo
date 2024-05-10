@@ -10,3 +10,9 @@ for i in range(6):
     print(list_l[i])
 
 print("HELLO")
+
+
+list_ou=[1,2,3,4,5,67,78,0]
+
+for i in range (6):
+    print(list_ou[i])
