@@ -15,4 +15,4 @@ print("HELLO")
 list_ou=[1,2,3,4,5,67,78,0]
 
 for i in range (6):
-    print(list_ou[i])
+    print(list_ou[4])
