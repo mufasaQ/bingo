@@ -8,3 +8,5 @@ for i in range(6):
     if(i==2):print(list_l[6])
     if(i==2):continue
     print(list_l[i])
+
+print("HELLO")
