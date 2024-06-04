@@ -1,6 +1,0 @@
-
-
-comand = input("y or n")
-
-if(comand=="y"):print("haloo")
-if(comand=="n"):print("no")
