@@ -1,3 +1,5 @@
+import sys
+import os
 import re
 import random
 
@@ -64,7 +66,8 @@ def spiel_bingo(name, matrix, buzzw):
             print(f"Gewonnen! {name}!")
             for row in matrix:
                 print(row)
-            return
+            sys.exit()
+        
 
         word_index += 1
 
