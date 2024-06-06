@@ -1,0 +1,106 @@
+import re
+import random
+
+# Einlesen der Karten
+def karten_einlesen(file_path):
+    with open(file_path, "r") as file:
+        return file.read().split()
+
+# Generierung der Bingokarten
+def generate_bingo_card(size, words):
+    rows = cols = 5 if size == 1 else 7
+    matrix = [[None for _ in range(cols)] for _ in range(rows)]
+
+    random.shuffle(words)
+    word_index = 0
+    for i in range(rows):
+        for j in range(cols):
+            matrix[i][j] = words[word_index]
+            word_index += 1
+
+    joker_pos = rows // 2
+    matrix[joker_pos][joker_pos] = "Joker"
+    return matrix
+
+# Methode zum Checken der Karten
+def check_bingo(card):
+    size = len(card)
+    joker_pos = size // 2
+    card[joker_pos][joker_pos] = "X"
+
+    rows = card
+    cols = [[card[j][i] for j in range(size)] for i in range(size)]
+    diags = [[card[i][i] for i in range(size)], [card[i][size-1-i] for i in range(size)]]
+    lines = rows + cols + diags
+
+    for line in lines:
+        if all(cell == "X" for cell in line):
+            return True
+    return False
+
+# Extrahiert die eingegebene Größe des Spielfeldes
+def exrahiere(eingabe):
+    return re.findall(r'\d+', eingabe)
+
+# Führt das Spiel aus
+def spiel_bingo(name, matrix, buzzw):
+    random.shuffle(buzzw)
+    word_index = 0
+    while word_index < len(buzzw):
+        print(name)
+        print(f"Ziehen: {buzzw[word_index]}")
+
+        for row in matrix:
+            print(row)
+        
+        input("Drück Enter, um das nächste Wort zu ziehen")
+
+        for i in range(len(matrix)):
+            for j in range(len(matrix[i])):
+                if matrix[i][j] == buzzw[word_index]:
+                    matrix[i][j] = "X"
+        
+        if check_bingo(matrix):
+            print(f"Gewonnen! {name}!")
+            for row in matrix:
+                print(row)
+            return
+
+        word_index += 1
+
+    print("Es ist ein Unentschieden.")
+
+# Start der Eingabe in der Kommandozeile
+def main():
+    while True:
+        w1 = input("Befehl eingeben ('newround' oder 'joinround'): ")
+
+        if w1 == "newround":
+            w2 = input("Wie groß soll das Spielfeld sein (z.B. 5x5 oder 7x7): ")
+            w22 = exrahiere(w2)
+            if len(w22) < 2:
+                print("Ungültige Eingabe, bitte erneut versuchen.")
+                continue
+
+            size = int(w22[0])
+            if size not in (5, 7):
+                print("Das Spiel unterstützt nur 5x5 und 7x7 Felder.")
+                continue
+
+            buzzerworter = input("Dateipfad der Buzzerwörter eingeben: ")
+            buzzw = karten_einlesen(buzzerworter)
+
+            matrix = generate_bingo_card(1 if size == 5 else 2, buzzw)
+
+            playername = input("Spielername eingeben: ")
+            spiel_bingo(playername, matrix, buzzw)
+
+        elif w1 == "joinround":
+            roundfile = input("Dateipfad der Runde eingeben: ")
+            playername2 = input("Spielername eingeben: ")
+            # Implementierung für 'joinround' fehlt im Originalcode
+
+        else:
+            print("Ungültiger Befehl.")
+
+main()
