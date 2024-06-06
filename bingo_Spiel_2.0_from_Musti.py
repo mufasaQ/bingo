@@ -72,13 +72,14 @@ def exrahiere(w222):
 
 #hier werden die relevanten sachen ausgeführt um das spiel zu spielen
 def spiel_bingo(name,matrix,buzzw):
-    #spiel wird gestartet
+    #spiel wird gestarte
+    random.shuffle(buzzw)
     j=True
+    word_index=0
     while j:
         print(name)
-        word_index=0
+        
         #karten werden gezogen
-        random.shuffle(buzzw)
         print(buzzw[word_index])
         #karten werden angezeigt
         for row in matrix:
@@ -88,12 +89,14 @@ def spiel_bingo(name,matrix,buzzw):
         #if statment wen alle karten gezogen worden sind
         if(word_index==len(buzzw)):print("es ist ein unendschieden")
         #überprüfung ob die karten mit den gezogenen karten übereinstimmen
+        
         for i in range(len(matrix)):
             for j in range(len(matrix[0]if len(matrix) > 0 else 0)):
                 
                 if(matrix[i][j]==buzzw[word_index]):
                     matrix[i][j]="X"
-                word_index+=1
+        
+        word_index+=1
         #checkt wer gewonnen hat
         if(check_bingo(matrix) and len(matrix)==5):
             print("gewonen"+"! "+name+" !")
@@ -144,6 +147,5 @@ def Main():
         print("solch ein Befehl exsetiert nicht")
         Main()
     
-
     
 Main()
