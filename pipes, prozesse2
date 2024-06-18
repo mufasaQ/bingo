@@ -3,36 +3,86 @@ import sys
 import time
 
 
-def create_named_pipe(pipe_name):  #methode zu Generierung named Pipes
-    if not os.path.exists(pipe_name): #Schaut nach, ob eine Pipe mit diesem Namen existiert
-        os.mkfifo(pipe_name)  #Generierung der Pipe mit dem gegebenen Namen mit mkfifo
+def spiel(pi,o,paths):
+    while True:
+        lessen(pi)
+        if(o==1):
+         schrieben(pi,paths)
+        o-=1
+        time.sleep(1)
+    
+
+         
+def lessen(pi):
+    try:
+     fifo=os.open(pi,os.O_RDONLY | os.O_NONBLOCK)
+     try:
+        time.sleep(2)
+        daten=os.read(fifo,128)
+        if daten:
+            print(daten.decode().strip())
+            os.unlink(pi)
+            time.sleep(4)
+            sys.exit()
+     finally:
+        os.close(fifo)
+    except IOError as e:
+        print(e)
+        
+def lessen2(pi):
+    try:
+     fifo=os.open(pi,os.O_RDONLY | os.O_NONBLOCK)
+     try:
+        time.sleep(2)
+        daten=os.read(fifo,128)
+        if daten:
+            print("spielbende")
+            os.unlink(pi)
+            time.sleep(4)
+            sys.exit()
+     finally:
+        os.close(fifo)
+    except IOError as e:
+        print(e)
+         
+                 
+def schrieben(pi,paths):
+    for i in range(len(paths)):
+        if(pi==paths[i]):
+            continue
+        print(paths[i])
+        fifo=os.open(paths[i],os.O_WRONLY)
+        s=f"GEWONEN{pi}\n".encode()
+        os.write(fifo,s)
+        os.close(fifo)
+    os.unlink(pi)
+    sys.exit()    
+        
+
+          
+
+def namedpipe(piname):
+    if not os.path.exists(piname):
+        os.mkfifo(piname)
 
 def main():
-    try:
-        player_count = int(input("Enter the number of players: ")) #Angabe zu Anzahl der Spieler
-
-        base_pipe_name = "game_pipe" #Name, unter dem die Pipes zu finden sind
-        pipe_paths = [f"{base_pipe_name}{i}" for i in range(player_count)] #Name, unter dem die Pipes zu finden sind, aber mit Nummerierung, damit nicht die Prozesse auf die gleiche Pipe zugreifen
+    spileranzahl=int(input("spileranzal"))
+    spileranzahl+=1
+    pipes="spiel9"
+    pp=[f"{pipes}{i}"for i in range(spileranzahl)]
+    pid=os.getpid()
+    for i in range(spileranzahl):
+        namedpipe(pp[i])
+    for i in range(1,spileranzahl):
+        pid=os.fork()
+        if(pid==0):
+            time.sleep(1)
+            spiel(pp[i],3+i,pp)
+    if(pid>0):
+        while True:
+            lessen2(pp[0])
+            time.sleep(3)
         
-        for path in pipe_paths:
-            create_named_pipe(path)  #Methode zu Generierung der Pipes
-        
-        for i in range(player_count):  #Generierung der Kinder Prozesse
-            pid = os.fork()  #Generierung der Kinder Prozesse
-            if pid == 0:
-                time.sleep(1)
-                Spiel(pipe_paths[i], pipe_paths) #Ausführen der Kinder Prozesse
-                sys.exit() #Kinder Prozess beenden ihre Prozesse
+    
 
-        if pid > 0:
-            time.sleep(30)
-            os.wait() #Vater Prozess wartet bis die Kinder Prozesse zu Ende sind
-
-    except ValueError:
-        print("Please enter a valid number of players.") #Falls Buchstaben anstatt zahlen eingegeben werden
-    except KeyboardInterrupt:
-        print("Game interrupted.") #Falls Keyboard Interrupt
-    finally:
-        for path in pipe_paths:
-            if os.path.exists(path):
-                os.unlink(path) #Löschen der Pipes, falls etwas da zwischen passiert
+main()
