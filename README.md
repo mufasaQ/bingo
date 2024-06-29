@@ -1,6 +1,3 @@
-Klar, hier ist das angepasste README-Layout mit den Punkten für "Imports" und "Gameplay" sowie den GIFs am Ende:
-
-```markdown
 # Bingo Spiel Bsrn
 
 ## Installation
